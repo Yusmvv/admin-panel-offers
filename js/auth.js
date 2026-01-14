@@ -202,6 +202,8 @@ function checkAuth() {
             const sessionAge = now - authData.loginTime;
             
             if (sessionAge < AUTH_CONFIG.sessionTimeout) {
+                // 🔧 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Обновляем глобальное состояние
+                authState = authData;
                 return true;
             } else {
                 clearAuthData();
