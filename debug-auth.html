@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Отладка auth.js</title>
+</head>
+<body>
+    <h2>Тест функции handleLogin</h2>
+    
+    <div id="debug-output" style="background:#f0f0f0;padding:20px;margin:20px 0;"></div>
+    
+    <script>
+    // Копия функции handleLogin из auth.js
+    const AUTH_CONFIG = {
+        defaultUsername: 'admin',
+        defaultPassword: 'admin123',
+        storageKey: 'admin_auth_data'
+    };
+    
+    function testHandleLogin() {
+        const output = document.getElementById('debug-output');
+        
+        // Эмулируем введённые данные
+        const username = 'admin';
+        const password = 'admin123';
+        const remember = true;
+        
+        output.innerHTML += '<p>1. Получены данные: ' + username + '/' + password + '</p>';
+        
+        // Проверка учётных данных
+        if (username === AUTH_CONFIG.defaultUsername && 
+            password === AUTH_CONFIG.defaultPassword) {
+            
+            output.innerHTML += '<p>2. ✅ Учётные данные верны</p>';
+            
+            const authState = {
+                isAuthenticated: true,
+                user: { username: username, role: 'admin' },
+                loginTime: Date.now()
+            };
+            
+            // Пробуем сохранить
+            try {
+                localStorage.setItem(AUTH_CONFIG.storageKey, JSON.stringify(authState));
+                output.innerHTML += '<p>3. ✅ Данные сохранены в localStorage</p>';
+                
+                // Проверяем, что сохранилось
+                const saved = localStorage.getItem(AUTH_CONFIG.storageKey);
+                output.innerHTML += '<p>4. Прочитано обратно: ' + saved + '</p>';
+            } catch (error) {
+                output.innerHTML += '<p>3. ❌ Ошибка сохранения: ' + error + '</p>';
+            }
+        } else {
+            output.innerHTML += '<p>2. ❌ Неверные учётные данные</p>';
+        }
+    }
+    
+    // Запускаем тест сразу
+    testHandleLogin();
+    </script>
+</body>
+</html>
