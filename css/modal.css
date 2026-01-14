@@ -1,0 +1,236 @@
+/* Модальные окна */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 1000px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    animation: modalSlide 0.3s ease;
+}
+
+@keyframes modalSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.modal-body {
+    padding: 28px;
+}
+
+/* Формы */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 15px;
+}
+
+.form-label span {
+    color: #ef4444;
+    margin-left: 4px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 15px;
+    transition: all 0.2s;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.form-control-sm {
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.form-columns-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-columns-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.form-columns-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.input-group .form-control {
+    flex: 1;
+}
+
+.input-group-text {
+    color: #64748b;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.form-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.2s;
+    flex: 1;
+    min-width: 180px;
+}
+
+.form-checkbox:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.form-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 2px dashed #e2e8f0;
+    min-height: 54px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    color: white;
+    font-weight: 500;
+    animation: chipSlide 0.2s ease;
+}
+
+@keyframes chipSlide {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.chip .remove {
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.chip .remove:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Медиа-запросы для модальных окон */
+@media (max-width: 768px) {
+    .form-columns-2,
+    .form-columns-3,
+    .form-columns-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .form-checkbox {
+        min-width: 140px;
+    }
+}
