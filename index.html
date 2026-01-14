@@ -3,49 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Админ-панель для управления офферами">
+    <meta name="theme-color" content="#0f172a">
     <title>Админ-панель - Управление офферами</title>
+    
+    <!-- Preconnect для CDN -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Шрифты и иконки -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Стили -->
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/modal.css">
+    
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
+    
+    <!-- Предзагрузка критических ресурсов -->
+    <link rel="preload" href="js/auth-check.js" as="script">
 </head>
 <body>
-    <div id="admin-app">
+    <!-- Экран загрузки -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loader-container">
+            <div class="loader"></div>
+            <p class="loading-text">Проверка авторизации...</p>
+        </div>
+    </div>
+    
+    <!-- Уведомления -->
+    <div id="notification-container" class="notification-container"></div>
+    
+    <!-- Основное приложение (скрыто до авторизации) -->
+    <div id="admin-app" style="display: none;">
         <!-- Контент загружается динамически после авторизации -->
     </div>
     
     <!-- Модальное окно добавления/редактирования оффера -->
-    <div class="modal" id="offer-modal">
-        <div class="modal-content">
+    <div class="modal" id="offer-modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-overlay" tabindex="-1" data-micromodal-close></div>
+        <div class="modal-content" role="document">
             <div class="modal-header">
-                <h2 id="modal-title" style="font-size: 24px; font-weight: 700; color: #0f172a;">
-                    <i class="fas fa-gem" style="margin-right: 12px;"></i>
+                <h2 id="modal-title" class="modal-title">
+                    <i class="fas fa-gem modal-icon"></i>
                     <span>Добавить новый оффер</span>
                 </h2>
-                <button class="btn btn-icon btn-secondary" id="close-modal">
+                <button class="btn btn-icon btn-secondary" id="close-modal" aria-label="Закрыть модальное окно">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
             <div class="modal-body">
-                <form id="offer-form">
+                <form id="offer-form" novalidate>
                     <input type="hidden" id="offer-id">
                     
                     <div class="form-group">
-                        <label class="form-label">Название оффера <span>*</span></label>
-                        <input type="text" class="form-control" id="offer-name" placeholder="Например: МоментальныеДеньги" required>
+                        <label for="offer-name" class="form-label">
+                            Название оффера <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="offer-name" 
+                               name="offer-name" 
+                               placeholder="Например: МоментальныеДеньги" 
+                               required
+                               aria-required="true"
+                               aria-describedby="name-error">
+                        <div id="name-error" class="form-error" role="alert" aria-live="polite"></div>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">Описание</label>
-                        <textarea class="form-control" id="description" rows="2" placeholder="Краткое описание оффера для клиентов"></textarea>
+                        <label for="description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="2" 
+                                  placeholder="Краткое описание оффера для клиентов"
+                                  aria-describedby="desc-help"></textarea>
+                        <div id="desc-help" class="form-help">Максимум 500 символов</div>
                     </div>
                     
-                    <div style="display: flex; gap: 16px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
-                        <button type="submit" class="btn btn-success" style="flex: 1;">
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success btn-save">
                             <i class="fas fa-save"></i> Сохранить оффер
                         </button>
-                        <button type="button" class="btn btn-secondary" id="cancel-btn" style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" id="cancel-btn">
                             <i class="fas fa-times"></i> Отмена
                         </button>
                     </div>
@@ -54,13 +93,36 @@
         </div>
     </div>
     
-    <script src="js/auth.js"></script>
+    <!-- Модальное окно подтверждения удаления -->
+    <div class="modal" id="confirm-modal" aria-hidden="true" role="dialog">
+        <div class="modal-overlay" tabindex="-1" data-micromodal-close></div>
+        <div class="modal-content modal-sm">
+            <div class="modal-body text-center">
+                <div class="confirm-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="confirm-title">Подтвердите удаление</h3>
+                <p class="confirm-message">Вы уверены, что хотите удалить этот оффер? Это действие необратимо.</p>
+                <div class="confirm-actions">
+                    <button class="btn btn-danger" id="confirm-delete">Удалить</button>
+                    <button class="btn btn-secondary" data-micromodal-close>Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Загрузка скриптов в правильном порядке -->
+    <!-- Сначала проверка авторизации -->
     <script src="js/auth-check.js"></script>
+    
+    <!-- Основной скрипт инициализации -->
     <script src="js/main.js"></script>
-    <!-- Основные модули -->
-    <script src="js/modal.js"></script>
-    <script src="js/offers.js"></script>
-    <script src="js/preview.js"></script>
-    <script src="js/settings.js"></script>
+    
+    <!-- Модули приложения (загружаются после успешной авторизации) -->
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/modal.js"></script>
+    <script type="module" src="js/offers.js"></script>
+    <script type="module" src="js/preview.js"></script>
+    <script type="module" src="js/settings.js"></script>
 </body>
 </html>
