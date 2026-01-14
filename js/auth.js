@@ -56,8 +56,12 @@ function checkSavedSession() {
 
 // Инициализация обработчиков
 function initAuthHandlers() {
+    console.log('🔧 initAuthHandlers запущен'); // ← ДОБАВЬТЕ ЭТУ СТРОКУ
+    
     // Форма входа
     const loginForm = document.getElementById('login-form');
+    console.log('Форма найдена?', !!loginForm); // ← И ЭТУ
+    
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
