@@ -1,4 +1,3 @@
-
 // Логика управления офферами
 
 // ===== ФУНКЦИИ РЕНДЕРИНГА =====
@@ -41,6 +40,8 @@ function renderOffersTab() {
         </div>
     `;
 }
+// 🔧 Делаем функцию глобально доступной
+window.renderOffersTab = renderOffersTab;
 
 function renderOffersList() {
     const tbody = document.getElementById('offers-list');
@@ -128,10 +129,12 @@ function renderOffersList() {
         </tr>
     `).join('');
 }
+window.renderOffersList = renderOffersList;
 
 // ===== ФУНКЦИИ РАБОТЫ С ОФФЕРАМИ =====
 
-function showOfferModal(offer = null) {
+// 🔧 ИСПРАВЛЕНИЕ: Переименовываем, чтобы не конфликтовать с modal.js
+function showEditOfferModal(offer = null) {
     window.currentEditOffer = offer;
     const modal = document.getElementById('offer-modal');
     const title = document.getElementById('modal-title');
@@ -143,10 +146,17 @@ function showOfferModal(offer = null) {
     
     if (offer) {
         title.innerHTML = '<i class="fas fa-edit" style="margin-right: 12px;"></i><span>Редактировать оффер</span>';
-        populateForm(offer);
+        // 🔧 Временно упрощаем - просто заполняем название
+        document.getElementById('offer-name').value = offer.name || '';
+        document.getElementById('description').value = offer.description || '';
     } else {
         title.innerHTML = '<i class="fas fa-plus-circle" style="margin-right: 12px;"></i><span>Добавить новый оффер</span>';
-        resetForm();
+        // 🔧 Вызываем функцию из modal.js для сброса
+        if (typeof window.resetOfferForm === 'function') {
+            window.resetOfferForm();
+        } else {
+            document.getElementById('offer-form').reset();
+        }
     }
     
     modal.classList.add('active');
@@ -155,9 +165,11 @@ function showOfferModal(offer = null) {
 function editOffer(id) {
     const offer = window.offers.find(o => o.id === id);
     if (offer) {
-        showOfferModal(offer);
+        showEditOfferModal(offer);
     }
 }
+// 🔧 Делаем глобально доступной
+window.editOffer = editOffer;
 
 function deleteOffer(id) {
     if (confirm('Вы уверены, что хотите удалить этот оффер? Это действие нельзя отменить.')) {
@@ -165,32 +177,31 @@ function deleteOffer(id) {
         if (index !== -1) {
             window.offers.splice(index, 1);
             window.saveData();
-            window.showNotification('Оффер успешно удален', 'success');
+            if (window.showNotification) {
+                window.showNotification('Оффер успешно удален', 'success');
+            }
         }
     }
 }
+// 🔧 Делаем глобально доступной
+window.deleteOffer = deleteOffer;
 
 function toggleOfferStatus(id) {
     const index = window.offers.findIndex(o => o.id === id);
     if (index !== -1) {
         window.offers[index].status = window.offers[index].status === 'active' ? 'inactive' : 'active';
         window.saveData();
-        window.showNotification('Статус оффера изменен', 'success');
+        if (window.showNotification) {
+            window.showNotification('Статус оффера изменен', 'success');
+        }
+        // 🔧 Обновляем таблицу сразу
+        if (typeof renderOffersList === 'function') {
+            renderOffersList();
+        }
     }
 }
-
-// ===== ФУНКЦИИ ФОРМЫ =====
-
-function populateForm(offer) {
-    // Эта функция будет работать с модальным окном
-    console.log('Заполняем форму для оффера:', offer.name);
-    // Здесь должен быть код заполнения полей формы
-}
-
-function resetForm() {
-    // Код сброса формы
-    console.log('Сброс формы');
-}
+// 🔧 Делаем глобально доступной
+window.toggleOfferStatus = toggleOfferStatus;
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
@@ -198,9 +209,19 @@ function initOffersHandlers() {
     // Кнопка добавления оффера
     const addButton = document.getElementById('add-offer-btn');
     if (addButton) {
-        addButton.addEventListener('click', () => showOfferModal());
+        // 🔧 ИСПРАВЛЕНИЕ: Используем функцию из modal.js для создания нового оффера
+        addButton.addEventListener('click', () => {
+            if (typeof window.showOfferModal === 'function') {
+                window.showOfferModal();
+            } else {
+                // Фолбэк на старую функцию
+                showEditOfferModal();
+            }
+        });
     }
     
     // Инициализация таблицы офферов
     renderOffersList();
 }
+// 🔧 Делаем глобально доступной
+window.initOffersHandlers = initOffersHandlers;
