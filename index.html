@@ -23,5 +23,44 @@
     <script src="js/offers.js"></script>
     <script src="js/preview.js"></script>
     <script src="js/settings.js"></script>
+     <!-- Модальное окно добавления/редактирования оффера -->
+    <div class="modal" id="offer-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title" style="font-size: 24px; font-weight: 700; color: #0f172a;">
+                    <i class="fas fa-gem" style="margin-right: 12px;"></i>
+                    <span>Добавить новый оффер</span>
+                </h2>
+                <button class="btn btn-icon btn-secondary" id="close-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="offer-form">
+                    <input type="hidden" id="offer-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Название оффера <span>*</span></label>
+                        <input type="text" class="form-control" id="offer-name" placeholder="Например: МоментальныеДеньги" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" id="description" rows="2" placeholder="Краткое описание оффера для клиентов"></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+                        <button type="submit" class="btn btn-success" style="flex: 1;">
+                            <i class="fas fa-save"></i> Сохранить оффер
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancel-btn" style="flex: 1;">
+                            <i class="fas fa-times"></i> Отмена
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
