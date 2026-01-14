@@ -1,548 +1,138 @@
-// ===== main.js =====
-// Основной модуль управления админ-панелью
-
 // ===== КОНФИГУРАЦИЯ =====
-const APP_CONFIG = {
-    version: '2.1',
-    storageKey: 'admin_offers_v2_1',
-    sessionKey: 'admin_session_data',
-    
-    // Пути к модулям
-    modules: {
-        offers: 'offers',
-        preview: 'preview',
-        settings: 'settings'
-    },
-    
-    // Настройки UI
-    defaultTab: 'offers',
-    animations: true,
-    confirmActions: true,
-    
-    // Сообщения
-    messages: {
-        loading: 'Загрузка приложения...',
-        dataLoaded: 'Данные загружены',
-        dataSaved: 'Данные сохранены',
-        errorLoading: 'Ошибка загрузки данных',
-        errorSaving: 'Ошибка сохранения данных'
-    }
+const CONFIG = {
+    VERSION: '2.1',
+    STORAGE_KEY: 'admin_offers',
+    ACTIVE_TAB_KEY: 'admin_active_tab'
 };
 
-// ===== СОСТОЯНИЕ ПРИЛОЖЕНИЯ =====
-const AppState = {
-    // Основные данные
+// ===== СОСТОЯНИЕ =====
+const state = {
     offers: [],
-    features: [],
-    
-    // UI состояние
-    currentTab: APP_CONFIG.defaultTab,
-    currentEditOffer: null,
-    isLoading: false,
-    isSaving: false,
-    
-    // Кэш
-    cache: {
-        offersList: null,
-        stats: null,
-        lastUpdate: null
-    },
-    
-    // Модули
-    modules: {
-        offers: null,
-        preview: null,
-        settings: null
-    }
+    currentTab: localStorage.getItem(CONFIG.ACTIVE_TAB_KEY) || 'offers',
+    user: { name: 'Администратор', role: 'admin' }
 };
 
-// ===== КОНТРОЛЛЕРЫ СОСТОЯНИЯ =====
+// ===== КОМПОНЕНТЫ =====
 
-// Инициализация состояния
-function initAppState() {
-    console.log('🔄 Инициализация состояния приложения...');
+/**
+ * Инициализация приложения
+ */
+export function initApp() {
+    console.log('🚀 Инициализация приложения');
     
     try {
-        // Загрузка сохраненного состояния
-        const savedState = localStorage.getItem(APP_CONFIG.storageKey + '_state');
-        if (savedState) {
-            const parsed = JSON.parse(savedState);
-            
-            // Восстановление только безопасных данных
-            AppState.offers = Array.isArray(parsed.offers) ? parsed.offers : [];
-            AppState.features = Array.isArray(parsed.features) ? parsed.features : [];
-            AppState.currentTab = parsed.currentTab || APP_CONFIG.defaultTab;
-            
-            console.log('✅ Состояние восстановлено');
-        } else {
-            console.log('📝 Новое состояние создано');
-        }
+        // Загрузка данных
+        loadData();
         
-        // Сброс временных состояний
-        AppState.currentEditOffer = null;
-        AppState.isLoading = false;
-        AppState.isSaving = false;
+        // Рендер интерфейса
+        renderApp();
         
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Ошибка инициализации состояния:', error);
-        resetAppState();
-        return false;
-    }
-}
-
-// Сброс состояния
-function resetAppState() {
-    AppState.offers = [];
-    AppState.features = [];
-    AppState.currentTab = APP_CONFIG.defaultTab;
-    AppState.currentEditOffer = null;
-    AppState.isLoading = false;
-    AppState.isSaving = false;
-    AppState.cache = {
-        offersList: null,
-        stats: null,
-        lastUpdate: null
-    };
-    
-    // Очистка кэша
-    clearCache();
-    
-    console.log('🔄 Состояние приложения сброшено');
-}
-
-// Сохранение состояния
-function saveAppState() {
-    try {
-        const stateToSave = {
-            offers: AppState.offers,
-            features: AppState.features,
-            currentTab: AppState.currentTab,
-            version: APP_CONFIG.version,
-            timestamp: Date.now()
-        };
-        
-        localStorage.setItem(APP_CONFIG.storageKey + '_state', JSON.stringify(stateToSave));
-        
-        // Инвалидация кэша
-        AppState.cache.lastUpdate = Date.now();
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Ошибка сохранения состояния:', error);
-        showNotification('Ошибка сохранения состояния', 'error');
-        return false;
-    }
-}
-
-// ===== УПРАВЛЕНИЕ ДАННЫМИ =====
-
-// Безопасная загрузка данных
-async function loadAppData() {
-    if (AppState.isLoading) {
-        console.log('⏳ Загрузка уже выполняется...');
-        return false;
-    }
-    
-    AppState.isLoading = true;
-    
-    try {
-        console.log('📥 Загрузка данных приложения...');
-        
-        // Загрузка офферов
-        const savedOffers = localStorage.getItem(APP_CONFIG.storageKey);
-        if (savedOffers) {
-            const parsed = JSON.parse(savedOffers);
-            
-            // Валидация данных
-            if (validateOffersData(parsed)) {
-                AppState.offers = parsed;
-                console.log(`✅ Загружено ${AppState.offers.length} офферов`);
-            } else {
-                console.warn('⚠️ Данные офферов не прошли валидацию');
-                AppState.offers = [];
-            }
-        } else {
-            console.log('📝 Данные офферов не найдены, создание примера...');
-            initExampleData();
-        }
-        
-        // Загрузка фич
-        const savedFeatures = localStorage.getItem('admin_features');
-        if (savedFeatures) {
-            AppState.features = JSON.parse(savedFeatures);
-        }
-        
-        AppState.isLoading = false;
-        showNotification(APP_CONFIG.messages.dataLoaded, 'success');
-        
-        // Обновление кэша
-        updateCache();
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Ошибка загрузки данных:', error);
-        AppState.isLoading = false;
-        showNotification(APP_CONFIG.messages.errorLoading, 'error');
-        return false;
-    }
-}
-
-// Безопасное сохранение данных
-async function saveAppData() {
-    if (AppState.isSaving) {
-        console.log('⏳ Сохранение уже выполняется...');
-        return false;
-    }
-    
-    AppState.isSaving = true;
-    
-    try {
-        console.log('💾 Сохранение данных приложения...');
-        
-        // Валидация перед сохранением
-        if (!validateOffersData(AppState.offers)) {
-            throw new Error('Данные не прошли валидацию');
-        }
-        
-        // Сохранение офферов
-        localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(AppState.offers));
-        
-        // Сохранение фич
-        localStorage.setItem('admin_features', JSON.stringify(AppState.features));
-        
-        // Сохранение состояния
-        saveAppState();
-        
-        // Инвалидация кэша
-        clearCache();
-        
-        console.log('✅ Данные успешно сохранены');
-        AppState.isSaving = false;
-        showNotification(APP_CONFIG.messages.dataSaved, 'success');
-        
-        // Обновление UI
-        updateAppUI();
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Ошибка сохранения данных:', error);
-        AppState.isSaving = false;
-        showNotification(APP_CONFIG.messages.errorSaving, 'error');
-        return false;
-    }
-}
-
-// Валидация данных офферов
-function validateOffersData(data) {
-    try {
-        if (!Array.isArray(data)) {
-            return false;
-        }
-        
-        // Проверка каждого оффера
-        for (const offer of data) {
-            if (!offer || typeof offer !== 'object') {
-                return false;
-            }
-            
-            // Обязательные поля
-            if (!offer.id || typeof offer.id !== 'string') {
-                return false;
-            }
-            
-            if (!offer.name || typeof offer.name !== 'string') {
-                return false;
-            }
-            
-            // Безопасность: проверка на XSS
-            const dangerousPatterns = /<script|javascript:|on\w+=/i;
-            if (dangerousPatterns.test(offer.name) || 
-                (offer.description && dangerousPatterns.test(offer.description))) {
-                console.warn('⚠️ Обнаружены потенциально опасные данные');
-                return false;
-            }
-        }
-        
-        return true;
-        
-    } catch (error) {
-        console.error('Ошибка валидации данных:', error);
-        return false;
-    }
-}
-
-// ===== КЭШИРОВАНИЕ =====
-
-// Обновление кэша
-function updateCache() {
-    AppState.cache.lastUpdate = Date.now();
-    AppState.cache.offersList = null;
-    AppState.cache.stats = null;
-    
-    console.log('🔄 Кэш обновлен');
-}
-
-// Очистка кэша
-function clearCache() {
-    AppState.cache = {
-        offersList: null,
-        stats: null,
-        lastUpdate: null
-    };
-    
-    console.log('🧹 Кэш очищен');
-}
-
-// Получение статистики (с кэшированием)
-function getCachedStats() {
-    if (AppState.cache.stats && 
-        AppState.cache.lastUpdate && 
-        (Date.now() - AppState.cache.lastUpdate < 5000)) {
-        return AppState.cache.stats;
-    }
-    
-    const stats = calculateStats();
-    AppState.cache.stats = stats;
-    AppState.cache.lastUpdate = Date.now();
-    
-    return stats;
-}
-
-// ===== УТИЛИТЫ =====
-
-// Форматирование чисел
-function formatNumber(num, decimals = 0) {
-    if (typeof num !== 'number' || isNaN(num)) {
-        return '0';
-    }
-    
-    return num.toLocaleString('ru-RU', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-    });
-}
-
-// Расчет статистики
-function calculateStats() {
-    const total = AppState.offers.length;
-    const active = AppState.offers.filter(o => o.status === 'active').length;
-    const landing1 = AppState.offers.filter(o => o.landing1 && o.status === 'active').length;
-    const landing2 = AppState.offers.filter(o => o.landing2 && o.status === 'active').length;
-    
-    // Расчет доходов
-    const totalIncome = AppState.offers.reduce((sum, offer) => {
-        return sum + (offer.income || 0);
-    }, 0);
-    
-    // Расчет просроченных
-    const now = new Date();
-    const overdue = AppState.offers.filter(offer => {
-        if (!offer.deadline) return false;
-        const deadline = new Date(offer.deadline);
-        return deadline < now && offer.status === 'active';
-    }).length;
-    
-    return {
-        total,
-        active,
-        landing1,
-        landing2,
-        totalIncome,
-        overdue,
-        inactive: total - active
-    };
-}
-
-// Генератор ID
-function generateId(prefix = 'offer') {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substr(2, 5);
-    return `${prefix}_${timestamp}_${random}`;
-}
-
-// Безопасный innerHTML
-function safeInnerHTML(element, html) {
-    if (!element) return;
-    
-    // Очистка потенциально опасных тегов
-    const safeHtml = html
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
-        .replace(/on\w+\s*=\s*'[^']*'/gi, '')
-        .replace(/javascript:/gi, '')
-        .replace(/data:/gi, '');
-    
-    element.innerHTML = safeHtml;
-}
-
-// ===== UI КОМПОНЕНТЫ =====
-
-// Показать уведомление
-function showNotification(message, type = 'info') {
-    // Проверяем, есть ли уже контейнер для уведомлений
-    let container = document.getElementById('notification-container');
-    
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.className = 'notification-container';
-        document.body.appendChild(container);
-    }
-    
-    // Создаем уведомление
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-message">${message}</div>
-        </div>
-        <button class="notification-close" aria-label="Закрыть">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    container.appendChild(notification);
-    
-    // Анимация появления
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // Автоматическое скрытие
-    const autoHide = setTimeout(() => {
-        hideNotification(notification);
-    }, 5000);
-    
-    // Кнопка закрытия
-    const closeBtn = notification.querySelector('.notification-close');
-    closeBtn.addEventListener('click', () => {
-        clearTimeout(autoHide);
-        hideNotification(notification);
-    });
-    
-    return notification;
-}
-
-// Скрыть уведомление
-function hideNotification(notification) {
-    notification.classList.remove('show');
-    notification.classList.add('hide');
-    
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 300);
-}
-
-// Показать экран загрузки
-function showLoadingScreen(message = APP_CONFIG.messages.loading) {
-    let loader = document.getElementById('app-loading-screen');
-    
-    if (!loader) {
-        loader = document.createElement('div');
-        loader.id = 'app-loading-screen';
-        loader.className = 'app-loading-screen';
-        document.body.appendChild(loader);
-    }
-    
-    loader.innerHTML = `
-        <div class="app-loader-container">
-            <div class="app-loader"></div>
-            <p class="app-loading-text">${message}</p>
-        </div>
-    `;
-    
-    loader.style.display = 'flex';
-    
-    return loader;
-}
-
-// Скрыть экран загрузки
-function hideLoadingScreen() {
-    const loader = document.getElementById('app-loading-screen');
-    if (loader) {
-        loader.style.display = 'none';
-    }
-}
-
-// ===== РЕНДЕРИНГ ИНТЕРФЕЙСА =====
-
-// Рендер основного интерфейса
-async function renderAppInterface() {
-    console.log('🎨 Рендер интерфейса приложения...');
-    
-    const appContainer = document.getElementById('admin-app');
-    if (!appContainer) {
-        console.error('❌ Контейнер приложения не найден');
-        return false;
-    }
-    
-    // Показываем загрузку
-    showLoadingScreen('Загрузка интерфейса...');
-    
-    try {
-        // Безопасный рендер HTML
-        safeInnerHTML(appContainer, getAppTemplate());
-        
-        // Инициализация UI компонентов
-        initAppUIComponents();
+        // Инициализация обработчиков
+        initEventListeners();
         
         // Загрузка активной вкладки
-        await loadActiveTab();
+        loadTab(state.currentTab);
         
-        // Обновление статистики
-        updateStatsDisplay();
-        
-        // Скрываем загрузку
-        setTimeout(hideLoadingScreen, 300);
-        
-        console.log('✅ Интерфейс успешно отрендерен');
-        return true;
+        console.log('✅ Приложение запущено');
+        showNotification('Приложение загружено', 'success');
         
     } catch (error) {
-        console.error('❌ Ошибка рендера интерфейса:', error);
-        hideLoadingScreen();
+        console.error('❌ Ошибка инициализации:', error);
+        showError('Ошибка запуска приложения');
+    }
+}
+
+/**
+ * Загрузка данных
+ */
+function loadData() {
+    try {
+        const data = localStorage.getItem(CONFIG.STORAGE_KEY);
+        state.offers = data ? JSON.parse(data) : [];
         
-        // Показать экран ошибки
-        appContainer.innerHTML = getErrorTemplate(error);
+        if (state.offers.length === 0) {
+            createDemoData();
+        }
+        
+        console.log(`📊 Загружено офферов: ${state.offers.length}`);
+        
+    } catch (error) {
+        console.error('Ошибка загрузки данных:', error);
+        state.offers = [];
+        createDemoData();
+    }
+}
+
+/**
+ * Сохранение данных
+ */
+function saveData() {
+    try {
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state.offers));
+        console.log('💾 Данные сохранены');
+        return true;
+    } catch (error) {
+        console.error('Ошибка сохранения:', error);
+        showNotification('Ошибка сохранения данных', 'error');
         return false;
     }
 }
 
-// Шаблон приложения
-function getAppTemplate() {
-    return `
+/**
+ * Создание демо данных
+ */
+function createDemoData() {
+    state.offers = [
+        {
+            id: generateId(),
+            name: 'Моментальные деньги',
+            description: 'Займы до 100 000 ₽ на карту',
+            status: 'active',
+            income: 50000
+        },
+        {
+            id: generateId(),
+            name: 'Кредитная карта',
+            description: 'Кредитный лимит до 500 000 ₽',
+            status: 'active',
+            income: 75000
+        }
+    ];
+    saveData();
+}
+
+/**
+ * Рендер основного интерфейса
+ */
+function renderApp() {
+    const app = document.getElementById('admin-app');
+    if (!app) return;
+    
+    app.innerHTML = `
         <div class="admin-container">
             <!-- Sidebar -->
-            <aside class="sidebar" role="navigation">
+            <aside class="sidebar">
                 <div class="logo">
                     <h1>
                         <i class="fas fa-cogs"></i>
                         <span>Админ-панель</span>
-                        <span class="logo-badge">v${APP_CONFIG.version}</span>
                     </h1>
                 </div>
                 
-                <nav class="nav-menu" aria-label="Основная навигация">
-                    <a href="#" class="nav-item active" data-tab="offers">
+                <nav class="nav-menu">
+                    <button class="nav-item active" data-tab="offers">
                         <i class="fas fa-gem"></i>
                         <span>Офферы</span>
-                        <span class="nav-badge" id="offers-badge">0</span>
-                    </a>
-                    <a href="#" class="nav-item" data-tab="preview">
+                        <span class="badge">${state.offers.length}</span>
+                    </button>
+                    <button class="nav-item" data-tab="preview">
                         <i class="fas fa-eye"></i>
                         <span>Предпросмотр</span>
-                    </a>
-                    <a href="#" class="nav-item" data-tab="settings">
+                    </button>
+                    <button class="nav-item" data-tab="settings">
                         <i class="fas fa-cog"></i>
                         <span>Настройки</span>
-                    </a>
+                    </button>
                 </nav>
                 
                 <!-- User Panel -->
@@ -552,147 +142,88 @@ function getAppTemplate() {
                             <i class="fas fa-user"></i>
                         </div>
                         <div class="user-details">
-                            <div class="user-name" id="user-name">Администратор</div>
-                            <div class="user-role">Админ</div>
+                            <div class="user-name">${state.user.name}</div>
+                            <div class="user-role">${state.user.role}</div>
                         </div>
                     </div>
-                    <button class="logout-btn" id="logout-btn" aria-label="Выйти из системы">
+                    <button class="logout-btn" id="logout-btn">
                         <i class="fas fa-sign-out-alt"></i>
-                        <span class="logout-text">Выйти</span>
                     </button>
                 </div>
             </aside>
             
             <!-- Main Content -->
-            <main class="main-content" role="main">
-                <!-- Header -->
-                <div class="stats-grid" id="stats-grid">
-                    <!-- Статистика будет загружена динамически -->
-                </div>
+            <main class="main-content">
+                <!-- Stats -->
+                <div class="stats" id="stats"></div>
                 
-                <!-- Content Area -->
-                <div id="content-area" class="content-area">
-                    <!-- Контент вкладок будет загружен здесь -->
+                <!-- Content -->
+                <div class="content-area" id="content-area">
+                    <div class="loading">Загрузка...</div>
                 </div>
             </main>
         </div>
-        
-        <!-- Модальные окна -->
-        <div id="modal-container"></div>
-        
-        <!-- Уведомления -->
-        <div id="notification-container" class="notification-container"></div>
     `;
+    
+    // Обновление статистики
+    updateStats();
 }
 
-// Шаблон ошибки
-function getErrorTemplate(error) {
-    return `
-        <div class="error-screen">
-            <div class="error-container">
-                <div class="error-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h2 class="error-title">Ошибка приложения</h2>
-                <p class="error-message">${error.message || 'Неизвестная ошибка'}</p>
-                <div class="error-actions">
-                    <button class="btn btn-primary" id="reload-app">
-                        <i class="fas fa-redo"></i> Перезагрузить
-                    </button>
-                    <button class="btn btn-secondary" id="reset-app">
-                        <i class="fas fa-trash"></i> Сбросить данные
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// Инициализация UI компонентов
-function initAppUIComponents() {
+/**
+ * Инициализация обработчиков событий
+ */
+function initEventListeners() {
     // Навигация
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
+    document.addEventListener('click', (e) => {
+        const tabBtn = e.target.closest('[data-tab]');
+        if (tabBtn) {
             e.preventDefault();
-            const tab = item.dataset.tab;
-            if (tab) {
-                switchTab(tab);
-            }
-        });
+            const tab = tabBtn.dataset.tab;
+            switchTab(tab);
+        }
     });
     
-    // Кнопка выхода
+    // Выход
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', handleLogout);
     }
-    
-    // Кнопка перезагрузки (если есть)
-    const reloadBtn = document.getElementById('reload-app');
-    if (reloadBtn) {
-        reloadBtn.addEventListener('click', () => window.location.reload());
-    }
-    
-    // Кнопка сброса (если есть)
-    const resetBtn = document.getElementById('reset-app');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', handleResetApp);
-    }
 }
 
-// ===== УПРАВЛЕНИЕ ВКЛАДКАМИ =====
-
-// Переключение вкладок
-async function switchTab(tabName) {
-    if (!tabName || AppState.currentTab === tabName) {
-        return;
-    }
+/**
+ * Переключение вкладки
+ */
+function switchTab(tab) {
+    if (state.currentTab === tab) return;
     
-    console.log(`🔄 Переключение на вкладку: ${tabName}`);
+    console.log(`🔄 Переключение на: ${tab}`);
     
-    try {
-        // Обновление активного состояния в навигации
-        updateActiveTab(tabName);
-        
-        // Обновление состояния
-        AppState.currentTab = tabName;
-        saveAppState();
-        
-        // Загрузка контента вкладки
-        await loadTabContent(tabName);
-        
-    } catch (error) {
-        console.error(`❌ Ошибка переключения вкладки ${tabName}:`, error);
-        showNotification(`Ошибка загрузки вкладки: ${tabName}`, 'error');
-    }
-}
-
-// Обновление активной вкладки в навигации
-function updateActiveTab(activeTab) {
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        const isActive = item.dataset.tab === activeTab;
-        item.classList.toggle('active', isActive);
-        item.setAttribute('aria-current', isActive ? 'page' : 'false');
+    // Обновление активной кнопки
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
     });
+    
+    // Сохранение выбора
+    state.currentTab = tab;
+    localStorage.setItem(CONFIG.ACTIVE_TAB_KEY, tab);
+    
+    // Загрузка контента
+    loadTab(tab);
 }
 
-// Загрузка контента вкладки
-async function loadTabContent(tabName) {
+/**
+ * Загрузка контента вкладки
+ */
+async function loadTab(tab) {
     const contentArea = document.getElementById('content-area');
-    if (!contentArea) {
-        console.error('❌ Область контента не найдена');
-        return;
-    }
+    if (!contentArea) return;
     
-    // Показать загрузку
-    contentArea.innerHTML = '<div class="tab-loading">Загрузка...</div>';
+    contentArea.innerHTML = '<div class="loading">Загрузка...</div>';
     
     try {
         let content = '';
         
-        switch (tabName) {
+        switch (tab) {
             case 'offers':
                 content = await loadOffersTab();
                 break;
@@ -703,447 +234,360 @@ async function loadTabContent(tabName) {
                 content = await loadSettingsTab();
                 break;
             default:
-                content = '<div class="empty-state"><p>Вкладка не найдена</p></div>';
+                content = '<div class="empty-state">Вкладка не найдена</div>';
         }
         
-        // Безопасный рендер
-        safeInnerHTML(contentArea, content);
+        contentArea.innerHTML = content;
         
         // Инициализация обработчиков вкладки
-        initTabHandlers(tabName);
+        initTabHandlers(tab);
         
     } catch (error) {
-        console.error(`❌ Ошибка загрузки вкладки ${tabName}:`, error);
+        console.error(`Ошибка загрузки вкладки ${tab}:`, error);
         contentArea.innerHTML = `
             <div class="error-state">
                 <h3>Ошибка загрузки</h3>
                 <p>${error.message}</p>
-                <button class="btn btn-secondary" onclick="switchTab('${tabName}')">
-                    <i class="fas fa-redo"></i> Попробовать снова
-                </button>
             </div>
         `;
     }
 }
 
-// Загрузка активной вкладки
-async function loadActiveTab() {
-    await loadTabContent(AppState.currentTab);
-}
-
-// Загрузка вкладки офферов
+/**
+ * Загрузка вкладки офферов
+ */
 async function loadOffersTab() {
-    // Проверка загрузки модуля
-    if (!AppState.modules.offers && typeof window.OffersModule !== 'undefined') {
-        AppState.modules.offers = window.OffersModule;
-    }
-    
-    if (AppState.modules.offers && typeof AppState.modules.offers.render === 'function') {
-        return AppState.modules.offers.render();
-    }
-    
-    // Fallback базовый шаблон
     return `
         <div class="tab-header">
-            <h2 class="tab-title">
-                <i class="fas fa-gem"></i>
-                Управление офферами
-            </h2>
+            <h2><i class="fas fa-gem"></i> Офферы</h2>
             <button class="btn btn-primary" id="add-offer-btn">
-                <i class="fas fa-plus"></i> Добавить оффер
+                <i class="fas fa-plus"></i> Добавить
             </button>
         </div>
-        <div class="tab-content">
-            <div id="offers-list-container">
-                <!-- Список офферов будет загружен здесь -->
+        
+        <div class="table-container">
+            <table class="offers-table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Описание</th>
+                        <th>Статус</th>
+                        <th>Доход</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="offers-table-body">
+                    ${renderOffersTable()}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="table-info">
+            Всего офферов: ${state.offers.length}
+        </div>
+    `;
+}
+
+/**
+ * Рендер таблицы офферов
+ */
+function renderOffersTable() {
+    if (state.offers.length === 0) {
+        return '<tr><td colspan="5" class="empty">Нет офферов</td></tr>';
+    }
+    
+    return state.offers.map(offer => `
+        <tr data-id="${offer.id}">
+            <td><strong>${escapeHtml(offer.name)}</strong></td>
+            <td>${escapeHtml(offer.description || '')}</td>
+            <td>
+                <span class="status-badge ${offer.status || 'inactive'}">
+                    ${offer.status === 'active' ? 'Активен' : 'Неактивен'}
+                </span>
+            </td>
+            <td>${offer.income ? formatNumber(offer.income) + ' ₽' : '-'}</td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-sm" onclick="editOffer('${offer.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteOffer('${offer.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Загрузка вкладки предпросмотра
+ */
+async function loadPreviewTab() {
+    return `
+        <div class="tab-header">
+            <h2><i class="fas fa-eye"></i> Предпросмотр</h2>
+        </div>
+        
+        <div class="preview-container">
+            <p>Функция предпросмотра офферов</p>
+            <p>Всего офферов: ${state.offers.length}</p>
+        </div>
+    `;
+}
+
+/**
+ * Загрузка вкладки настроек
+ */
+async function loadSettingsTab() {
+    return `
+        <div class="tab-header">
+            <h2><i class="fas fa-cog"></i> Настройки</h2>
+        </div>
+        
+        <div class="settings-container">
+            <div class="setting">
+                <h3>Демо данные</h3>
+                <p>Текущая версия: ${CONFIG.VERSION}</p>
+                <button class="btn btn-secondary" id="reset-data-btn">
+                    <i class="fas fa-trash"></i> Сбросить данные
+                </button>
             </div>
         </div>
     `;
 }
 
-// Загрузка вкладки предпросмотра
-async function loadPreviewTab() {
-    if (!AppState.modules.preview && typeof window.PreviewModule !== 'undefined') {
-        AppState.modules.preview = window.PreviewModule;
-    }
-    
-    if (AppState.modules.preview && typeof AppState.modules.preview.render === 'function') {
-        return AppState.modules.preview.render();
-    }
-    
-    return '<div class="empty-state"><p>Модуль предпросмотра не загружен</p></div>';
-}
-
-// Загрузка вкладки настроек
-async function loadSettingsTab() {
-    if (!AppState.modules.settings && typeof window.SettingsModule !== 'undefined') {
-        AppState.modules.settings = window.SettingsModule;
-    }
-    
-    if (AppState.modules.settings && typeof AppState.modules.settings.render === 'function') {
-        return AppState.modules.settings.render();
-    }
-    
-    return '<div class="empty-state"><p>Модуль настроек не загружен</p></div>';
-}
-
-// Инициализация обработчиков вкладки
-function initTabHandlers(tabName) {
-    switch (tabName) {
+/**
+ * Инициализация обработчиков вкладки
+ */
+function initTabHandlers(tab) {
+    switch (tab) {
         case 'offers':
-            if (AppState.modules.offers && typeof AppState.modules.offers.init === 'function') {
-                AppState.modules.offers.init();
-            } else {
-                initBasicOffersHandlers();
-            }
-            break;
-        case 'preview':
-            if (AppState.modules.preview && typeof AppState.modules.preview.init === 'function') {
-                AppState.modules.preview.init();
-            }
+            initOffersHandlers();
             break;
         case 'settings':
-            if (AppState.modules.settings && typeof AppState.modules.settings.init === 'function') {
-                AppState.modules.settings.init();
-            }
+            initSettingsHandlers();
             break;
     }
 }
 
-// Базовые обработчики для офферов (fallback)
-function initBasicOffersHandlers() {
+/**
+ * Инициализация обработчиков офферов
+ */
+function initOffersHandlers() {
+    // Добавление оффера
     const addBtn = document.getElementById('add-offer-btn');
     if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            showNotification('Модуль офферов не загружен', 'warning');
-        });
+        addBtn.addEventListener('click', showAddOfferModal);
     }
 }
 
-// ===== ОБНОВЛЕНИЕ UI =====
-
-// Обновление всего UI
-function updateAppUI() {
-    updateStatsDisplay();
-    updateOffersBadge();
-    
-    // Обновление активной вкладки
-    if (AppState.currentTab === 'offers') {
-        updateOffersList();
+/**
+ * Инициализация обработчиков настроек
+ */
+function initSettingsHandlers() {
+    // Сброс данных
+    const resetBtn = document.getElementById('reset-data-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', handleResetData);
     }
 }
 
-// Обновление статистики
-function updateStatsDisplay() {
-    const statsGrid = document.getElementById('stats-grid');
-    if (!statsGrid) return;
+/**
+ * Обновление статистики
+ */
+function updateStats() {
+    const statsEl = document.getElementById('stats');
+    if (!statsEl) return;
     
-    const stats = getCachedStats();
+    const total = state.offers.length;
+    const active = state.offers.filter(o => o.status === 'active').length;
+    const income = state.offers.reduce((sum, o) => sum + (o.income || 0), 0);
     
-    safeInnerHTML(statsGrid, `
+    statsEl.innerHTML = `
         <div class="stat-card">
-            <div class="stat-icon stat-icon-1">
-                <i class="fas fa-gem"></i>
-            </div>
-            <div class="stat-value">${formatNumber(stats.total)}</div>
+            <div class="stat-value">${total}</div>
             <div class="stat-label">Всего офферов</div>
         </div>
-        
         <div class="stat-card">
-            <div class="stat-icon stat-icon-2">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="stat-value">${formatNumber(stats.active)}</div>
+            <div class="stat-value">${active}</div>
             <div class="stat-label">Активные</div>
         </div>
-        
         <div class="stat-card">
-            <div class="stat-icon stat-icon-3">
-                <i class="fas fa-hourglass-end"></i>
-            </div>
-            <div class="stat-value">${formatNumber(stats.overdue)}</div>
-            <div class="stat-label">Просрочены</div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon stat-icon-4">
-                <i class="fas fa-wallet"></i>
-            </div>
-            <div class="stat-value">${formatNumber(stats.totalIncome, 0)} ₽</div>
+            <div class="stat-value">${formatNumber(income, 0)} ₽</div>
             <div class="stat-label">Общий доход</div>
         </div>
-    `);
-}
-
-// Обновление бейджа офферов
-function updateOffersBadge() {
-    const badge = document.getElementById('offers-badge');
+    `;
+    
+    // Обновление бейджа
+    const badge = document.querySelector('.nav-item[data-tab="offers"] .badge');
     if (badge) {
-        const stats = getCachedStats();
-        badge.textContent = formatNumber(stats.total);
+        badge.textContent = total;
     }
 }
 
-// Обновление списка офферов
-function updateOffersList() {
-    if (AppState.modules.offers && typeof AppState.modules.offers.update === 'function') {
-        AppState.modules.offers.update();
+/**
+ * Показать модалку добавления оффера
+ */
+function showAddOfferModal() {
+    // Реализация модалки будет в отдельном модуле
+    showNotification('Добавление оффера (функция в разработке)', 'info');
+}
+
+/**
+ * Редактирование оффера
+ */
+function editOffer(id) {
+    const offer = state.offers.find(o => o.id === id);
+    if (offer) {
+        showNotification(`Редактирование: ${offer.name}`, 'info');
     }
 }
 
-// ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
-
-// Выход из системы
-async function handleLogout() {
-    if (APP_CONFIG.confirmActions) {
-        const confirmed = confirm('Вы уверены, что хотите выйти?');
-        if (!confirmed) return;
+/**
+ * Удаление оффера
+ */
+function deleteOffer(id) {
+    if (!confirm('Удалить оффер?')) return;
+    
+    state.offers = state.offers.filter(o => o.id !== id);
+    saveData();
+    updateStats();
+    
+    // Перезагрузка вкладки
+    if (state.currentTab === 'offers') {
+        loadTab('offers');
     }
     
-    showNotification('Выход из системы...', 'info');
+    showNotification('Оффер удален', 'success');
+}
+
+/**
+ * Сброс данных
+ */
+function handleResetData() {
+    if (!confirm('Сбросить все данные? Это действие нельзя отменить.')) return;
     
-    try {
-        // Очистка данных сессии
-        localStorage.removeItem(APP_CONFIG.sessionKey);
-        sessionStorage.clear();
-        
-        // Редирект на страницу входа
-        setTimeout(() => {
-            window.location.href = 'auth.html';
-        }, 1000);
-        
-    } catch (error) {
-        console.error('Ошибка при выходе:', error);
-        showNotification('Ошибка при выходе', 'error');
+    localStorage.clear();
+    state.offers = [];
+    createDemoData();
+    updateStats();
+    loadTab('settings');
+    
+    showNotification('Данные сброшены', 'success');
+}
+
+/**
+ * Выход из системы
+ */
+function handleLogout() {
+    if (confirm('Вы уверены, что хотите выйти?')) {
+        localStorage.removeItem('admin_auth');
+        window.location.href = 'auth.html';
     }
 }
 
-// Сброс приложения
-async function handleResetApp() {
-    if (APP_CONFIG.confirmActions) {
-        const confirmed = confirm('Вы уверены, что хотите сбросить все данные? Это действие нельзя отменить.');
-        if (!confirmed) return;
-    }
-    
-    showLoadingScreen('Сброс данных...');
-    
-    try {
-        // Очистка всех данных
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Сброс состояния
-        resetAppState();
-        
-        // Перезагрузка
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
-        
-    } catch (error) {
-        console.error('Ошибка при сбросе:', error);
-        hideLoadingScreen();
-        showNotification('Ошибка при сбросе данных', 'error');
-    }
+// ===== УТИЛИТЫ =====
+
+/**
+ * Генерация ID
+ */
+function generateId() {
+    return 'id_' + Math.random().toString(36).substr(2, 9);
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====
-
-// Основная функция инициализации
-async function initAdminApp() {
-    console.log('🚀 Инициализация админ-панели...');
-    
-    try {
-        // Инициализация состояния
-        if (!initAppState()) {
-            throw new Error('Не удалось инициализировать состояние приложения');
-        }
-        
-        // Загрузка данных
-        await loadAppData();
-        
-        // Рендер интерфейса
-        if (!await renderAppInterface()) {
-            throw new Error('Не удалось загрузить интерфейс');
-        }
-        
-        // Загрузка модулей
-        await loadAppModules();
-        
-        // Инициализация событий
-        initAppEvents();
-        
-        console.log('✅ Админ-панель успешно запущена');
-        showNotification('Приложение загружено', 'success');
-        
-    } catch (error) {
-        console.error('❌ Критическая ошибка инициализации:', error);
-        
-        // Показать экран ошибки
-        const appContainer = document.getElementById('admin-app');
-        if (appContainer) {
-            safeInnerHTML(appContainer, getErrorTemplate(error));
-        }
-        
-        showNotification('Ошибка запуска приложения', 'error');
-    }
-}
-
-// Загрузка модулей
-async function loadAppModules() {
-    console.log('📦 Загрузка модулей приложения...');
-    
-    // Модули загружаются через script теги в index.html
-    // Здесь мы просто проверяем их наличие
-    
-    const modules = ['offers', 'preview', 'settings'];
-    
-    modules.forEach(module => {
-        const moduleName = module.charAt(0).toUpperCase() + module.slice(1) + 'Module';
-        if (window[moduleName]) {
-            AppState.modules[module] = window[moduleName];
-            console.log(`✅ Модуль ${module} загружен`);
-        } else {
-            console.warn(`⚠️ Модуль ${module} не найден`);
-        }
+/**
+ * Форматирование числа
+ */
+function formatNumber(num, decimals = 0) {
+    return num.toLocaleString('ru-RU', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
     });
 }
 
-// Инициализация событий приложения
-function initAppEvents() {
-    // Глобальные обработчики клавиш
-    document.addEventListener('keydown', handleGlobalKeys);
-    
-    // Обработка изменения данных
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Обработка вкладок браузера
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+/**
+ * Экранирование HTML
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
-// Обработка глобальных клавиш
-function handleGlobalKeys(event) {
-    // Ctrl + S - сохранение
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-        event.preventDefault();
-        saveAppData();
-    }
+/**
+ * Показать уведомление
+ */
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container') || createNotificationContainer();
     
-    // Escape - закрытие модалок
-    if (event.key === 'Escape') {
-        const modals = document.querySelectorAll('.modal.active');
-        if (modals.length > 0) {
-            // Закрыть последнее активное модальное окно
-            modals[modals.length - 1].classList.remove('active');
-        }
-    }
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span>${message}</span>
+        <button class="close-btn">×</button>
+    `;
+    
+    container.appendChild(notification);
+    
+    // Автоудаление
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+    
+    // Закрытие по клику
+    notification.querySelector('.close-btn').addEventListener('click', () => {
+        notification.remove();
+    });
 }
 
-// Обработка изменения storage
-function handleStorageChange(event) {
-    if (event.key === APP_CONFIG.storageKey) {
-        console.log('🔔 Обнаружено изменение данных в storage');
-        
-        // Перезагрузка данных
-        loadAppData().then(() => {
-            updateAppUI();
-            showNotification('Данные обновлены', 'info');
-        });
-    }
+/**
+ * Создание контейнера для уведомлений
+ */
+function createNotificationContainer() {
+    const container = document.createElement('div');
+    container.id = 'notification-container';
+    container.className = 'notification-container';
+    document.body.appendChild(container);
+    return container;
 }
 
-// Обработка видимости страницы
-function handleVisibilityChange() {
-    if (document.hidden) {
-        console.log('📄 Страница скрыта');
-    } else {
-        console.log('📄 Страница видима, обновление данных...');
-        loadAppData();
-    }
-}
-
-// ===== ПРИМЕРНЫЕ ДАННЫЕ =====
-
-// Инициализация примерных данных
-function initExampleData() {
-    console.log('📝 Создание примерных данных...');
+/**
+ * Показать ошибку
+ */
+function showError(message) {
+    const app = document.getElementById('admin-app');
+    if (!app) return;
     
-    AppState.offers = [
-        {
-            id: generateId(),
-            name: 'Моментальные деньги',
-            description: 'Займы до 100 000 ₽ на карту',
-            status: 'active',
-            landing1: true,
-            landing2: false,
-            income: 50000,
-            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            features: ['Без проверки КИ', 'За 5 минут', 'На любую карту']
-        },
-        {
-            id: generateId(),
-            name: 'Кредитная карта',
-            description: 'Кредитный лимит до 500 000 ₽',
-            status: 'active',
-            landing1: true,
-            landing2: true,
-            income: 75000,
-            deadline: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-            features: ['Кэшбэк 5%', 'Бесплатное обслуживание', 'Льготный период']
-        }
-    ];
-    
-    AppState.features = [
-        'Без проверки КИ',
-        'За 5 минут',
-        'На любую карту',
-        'Кэшбэк 5%',
-        'Бесплатное обслуживание',
-        'Льготный период'
-    ];
-    
-    // Сохранение данных
-    saveAppData();
-    
-    console.log('✅ Примерные данные созданы');
+    app.innerHTML = `
+        <div class="error-screen">
+            <div class="error-icon">⚠️</div>
+            <h3>Ошибка</h3>
+            <p>${message}</p>
+            <button class="btn" onclick="location.reload()">Перезагрузить</button>
+        </div>
+    `;
 }
 
 // ===== ГЛОБАЛЬНЫЙ ДОСТУП =====
 
-// Экспорт API приложения
+// Для совместимости
+window.initAdminApp = initApp;
 window.App = {
-    // Конфигурация
-    config: APP_CONFIG,
-    
-    // Состояние
-    state: AppState,
-    
-    // Основные функции
-    init: initAdminApp,
-    save: saveAppData,
-    load: loadAppData,
-    switchTab: switchTab,
-    updateUI: updateAppUI,
-    logout: handleLogout,
-    
-    // Утилиты
-    formatNumber: formatNumber,
-    generateId: generateId,
-    showNotification: showNotification,
-    
-    // Данные
-    getOffers: () => [...AppState.offers],
-    getStats: () => ({ ...getCachedStats() }),
-    getFeatures: () => [...AppState.features]
+    state,
+    initApp,
+    saveData,
+    loadData: loadData,
+    switchTab,
+    deleteOffer,
+    editOffer
 };
 
-// Автоматическая инициализация при загрузке
+// Автоматическая инициализация
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(initAdminApp, 100);
-    });
+    document.addEventListener('DOMContentLoaded', initApp);
 } else {
-    setTimeout(initAdminApp, 100);
+    setTimeout(initApp, 100);
 }
 
-console.log('📦 Основной модуль приложения загружен');
+console.log('📦 Основной модуль загружен');
