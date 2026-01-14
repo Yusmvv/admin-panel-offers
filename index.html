@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     
     <!-- Шрифты и иконки -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Стили -->
     <link rel="stylesheet" href="css/admin.css">
@@ -19,9 +19,6 @@
     
     <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
-    
-    <!-- Предзагрузка критических ресурсов -->
-    <link rel="preload" href="js/auth-check.js" as="script">
 </head>
 <body>
     <!-- Экран загрузки -->
@@ -33,23 +30,21 @@
     </div>
     
     <!-- Уведомления -->
-    <div id="notification-container" class="notification-container"></div>
+    <div id="notification-container"></div>
     
     <!-- Основное приложение (скрыто до авторизации) -->
-    <div id="admin-app" style="display: none;">
-        <!-- Контент загружается динамически после авторизации -->
-    </div>
+    <div id="admin-app" hidden></div>
     
-    <!-- Модальное окно добавления/редактирования оффера -->
-    <div class="modal" id="offer-modal" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
-        <div class="modal-overlay" tabindex="-1" data-micromodal-close></div>
-        <div class="modal-content" role="document">
+    <!-- Модальные окна -->
+    <div class="modal" id="offer-modal" hidden aria-modal="true" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modal-title" class="modal-title">
                     <i class="fas fa-gem modal-icon"></i>
                     <span>Добавить новый оффер</span>
                 </h2>
-                <button class="btn btn-icon btn-secondary" id="close-modal" aria-label="Закрыть модальное окно">
+                <button class="btn btn-icon btn-secondary close-modal" aria-label="Закрыть">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -63,28 +58,25 @@
                             Название оффера <span class="required">*</span>
                         </label>
                         <input type="text" class="form-control" id="offer-name" 
-                               name="offer-name" 
                                placeholder="Например: МоментальныеДеньги" 
-                               required
-                               aria-required="true"
-                               aria-describedby="name-error">
-                        <div id="name-error" class="form-error" role="alert" aria-live="polite"></div>
+                               required>
+                        <div class="form-error" data-error="name"></div>
                     </div>
                     
                     <div class="form-group">
                         <label for="description" class="form-label">Описание</label>
-                        <textarea class="form-control" id="description" name="description" 
+                        <textarea class="form-control" id="description" 
                                   rows="2" 
                                   placeholder="Краткое описание оффера для клиентов"
-                                  aria-describedby="desc-help"></textarea>
-                        <div id="desc-help" class="form-help">Максимум 500 символов</div>
+                                  maxlength="500"></textarea>
+                        <div class="form-help">Максимум 500 символов</div>
                     </div>
                     
                     <div class="form-actions">
                         <button type="submit" class="btn btn-success btn-save">
                             <i class="fas fa-save"></i> Сохранить оффер
                         </button>
-                        <button type="button" class="btn btn-secondary" id="cancel-btn">
+                        <button type="button" class="btn btn-secondary cancel-btn">
                             <i class="fas fa-times"></i> Отмена
                         </button>
                     </div>
@@ -94,8 +86,8 @@
     </div>
     
     <!-- Модальное окно подтверждения удаления -->
-    <div class="modal" id="confirm-modal" aria-hidden="true" role="dialog">
-        <div class="modal-overlay" tabindex="-1" data-micromodal-close></div>
+    <div class="modal" id="confirm-modal" hidden aria-modal="true" role="dialog">
+        <div class="modal-overlay"></div>
         <div class="modal-content modal-sm">
             <div class="modal-body text-center">
                 <div class="confirm-icon">
@@ -105,24 +97,14 @@
                 <p class="confirm-message">Вы уверены, что хотите удалить этот оффер? Это действие необратимо.</p>
                 <div class="confirm-actions">
                     <button class="btn btn-danger" id="confirm-delete">Удалить</button>
-                    <button class="btn btn-secondary" data-micromodal-close>Отмена</button>
+                    <button class="btn btn-secondary cancel-btn">Отмена</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Загрузка скриптов в правильном порядке -->
-    <!-- Сначала проверка авторизации -->
-    <script src="js/auth-check.js"></script>
-    
-    <!-- Основной скрипт инициализации -->
-    <script src="js/main.js"></script>
-    
-    <!-- Модули приложения (загружаются после успешной авторизации) -->
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/modal.js"></script>
-    <script type="module" src="js/offers.js"></script>
-    <script type="module" src="js/preview.js"></script>
-    <script type="module" src="js/settings.js"></script>
+    <!-- Скрипты -->
+    <!-- Основной загрузчик с правильным порядком -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
