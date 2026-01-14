@@ -1,3 +1,4 @@
+
 // Логика управления офферами
 
 // ===== ФУНКЦИИ РЕНДЕРИНГА =====
@@ -44,8 +45,7 @@ function renderOffersTab() {
 function renderOffersList() {
     const tbody = document.getElementById('offers-list');
     if (!tbody) return;
-    
-    if (window.offers.length === 0) {
+    if (!window.offers || window.offers.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="8">
