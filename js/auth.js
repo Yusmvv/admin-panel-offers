@@ -81,6 +81,7 @@ function initAuthHandlers() {
 
 // Обработка входа
 function handleLogin(event) {
+     console.log('🔧 handleLogin ВЫЗВАНА!'); // ← ДОБАВЬТЕ ЭТУ СТРОКУ
     event.preventDefault();
     
     const username = document.getElementById('username').value.trim();
