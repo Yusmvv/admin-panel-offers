@@ -745,7 +745,7 @@ GITHUB_TOKEN: 'ВАШ_ТОКЕН_ЗДЕСЬ' // Замените на ваш Git
                 if (gistData.files && gistData.files[GIST_CONFIG.FILENAME]) {
                     const content = gistData.files[GIST_CONFIG.FILENAME].content;
                     const data = JSON.parse(content);
-                    offers = data.offers || data || [];
+                    offers = Array.isArray(data) ? data : (data.offers || []);
                     console.log(`Загружено ${offers.length} офферов из Gist`);
                     updateSyncStatus('Данные загружены из Gist', 'success');
                     showNotification(`Загружено ${offers.length} офферов из облака`, 'success');
