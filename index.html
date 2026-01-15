@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список проектов</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .container { max-width: 800px; padding: 40px; text-align: center; }
+        h1 { color: #1e293b; margin-bottom: 10px; font-size: 2.8rem; }
+        .subtitle { color: #64748b; font-size: 1.2rem; margin-bottom: 50px; }
+        .project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; }
+        .project-card {
+            background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            text-decoration: none; color: inherit; display: block; transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+        .project-card:hover { transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .card-icon { font-size: 3rem; margin-bottom: 20px; display: block; }
+        .card-title { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+        .card-desc { color: #64748b; font-size: 0.95rem; line-height: 1.5; }
+        .admin-icon { color: #3b82f6; }
+        .landing1-icon { color: #10b981; }
+        .landing2-icon { color: #8b5cf6; }
+        .instructions { margin-top: 40px; padding: 20px; background: #f1f5f9; border-radius: 12px; color: #475569; font-size: 0.9rem; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Панель управления</h1>
+        <p class="subtitle">Доступные проекты</p>
+
+        <div class="project-grid">
+            <a href="./admin/index.html" class="project-card">
+                <i class="fas fa-cogs card-icon admin-icon"></i>
+                <div class="card-title">Админ-панель</div>
+                <div class="card-desc">Управление офферами, настройка Gist API</div>
+            </a>
+            <a href="./landing1/index.html" class="project-card">
+                <i class="fas fa-brain card-icon landing1-icon"></i>
+                <div class="card-title">Лендинг 1 — FinAI</div>
+                <div class="card-desc">Интеллектуальный подбор займов</div>
+            </a>
+            <a href="./landing2/index.html" class="project-card">
+                <i class="fas fa-handshake card-icon landing2-icon"></i>
+                <div class="card-title">Лендинг 2 — ДеньгиСразу</div>
+                <div class="card-desc">Конструктор для быстрого получения денег</div>
+            </a>
+        </div>
+
+        <div class="instructions">
+            <p><strong>Если вы видите эту страницу, значит GitHub Pages работает правильно.</strong></p>
+            <p>1. Нажмите на карточку выше, чтобы перейти к нужному проекту.</p>
+            <p>2. Чтобы открыть сайт напрямую, используйте полные ссылки:</p>
+            <ul style="margin
